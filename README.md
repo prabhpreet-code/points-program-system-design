@@ -43,7 +43,7 @@ The first approach that comes to mind is snapshotting: Weekly?? Hourly?? Daily??
 
 1. **Scoring (Continuous):** Event / price-tick based. The engine calculates points continuously between events:
 
-   $$\text{points} \mathrel{+}= rate(t) \cdot \Delta t$$
+   `points += rate(t) * dt`
 
    No buckets, no midnight snapshots.
 
@@ -57,26 +57,30 @@ It's a trade-off honestly. We run a saturation curve over a user's accrued point
 
 ## Scoring Model
 
-State is piecewise-constant between user actions and price/funding updates, so the integral collapses into a sum of $rate \times \Delta t$ slices.
+State is piecewise-constant between user actions and price/funding updates, so the integral collapses into a sum of `rate * dt` slices.
 
-$$rate(u, t) = V(u, t) + D(u, t) + F(u, t)$$
+```txt
+rate(u, t) = V(u, t) + D(u, t) + F(u, t)
+```
 
 | Term  | Formula                                                             | Description                   |
 | ----- | ------------------------------------------------------------------- | ----------------------------- |
-| **V** | $k_V \cdot \text{vault\_balance\_usd}(u, t)$                        | Vault-managed capital         |
-| **D** | $k_D \cdot \sum \text{notional}(p, t) \cdot S(p, t)$                | Direct position capital       |
-| **F** | $k_F \cdot \max\!\left(\text{funding\_paid\_rate}(u, t),\ 0\right)$ | Funding / demand contribution |
+| **V** | `k_V * vault_balance_usd(u, t)`                                     | Vault-managed capital         |
+| **D** | `k_D * Σ notional(p, t) * S(p, t)`                                  | Direct position capital       |
+| **F** | `k_F * max(funding_paid_rate(u, t), 0)`                             | Funding / demand contribution |
 
-$$\boxed{\text{Points}(u,\ [t_0, t_1]) = \int_{t_0}^{t_1} rate(u, s)\ ds}$$
+```txt
+Points(u, [t0, t1]) = integral of rate(u, s) ds
+```
 
 ### Variable Definitions
 
 | Variable                           | Definition                                                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| $\text{vault\_balance\_usd}(u, t)$ | USD value of the user's share of the managed vault                                                          |
-| $\text{notional}(p, t)$            | USD value of direct position $p$ — held constant from `POSITION_OPEN` (see Improvements for Mark-to-Market) |
-| $S(p, t)$                          | Productivity factor: **1.0** if in-range, **0.25** if out-of-range                                          |
-| $\text{funding\_paid\_rate}(u, t)$ | USD/second the user is paying; capped at $0$ via $\max()$ so users _receiving_ funding don't lose points    |
+| `vault_balance_usd(u, t)`          | USD value of the user's share of the managed vault                                                            |
+| `notional(p, t)`                   | USD value of direct position `p` — held constant from `POSITION_OPEN` (see Improvements for Mark-to-Market) |
+| `S(p, t)`                          | Productivity factor: **1.0** if in-range, **0.25** if out-of-range                                            |
+| `funding_paid_rate(u, t)`          | USD/second the user is paying; capped at `0` via `max()` so users _receiving_ funding don't lose points      |
 
 ### Events That Change the Rate
 
@@ -92,9 +96,9 @@ Constants are chosen so that equal capital and average market conditions produce
 
 | Constant | Target                                                           |
 | -------- | ---------------------------------------------------------------- |
-| $k_V$    | \$1,000 in the vault for 1 day ≈ **10 points**                   |
-| $k_D$    | \$1,000 in a medium-width, in-range LP for 1 day ≈ **10 points** |
-| $k_F$    | A taker earning 10 points has paid ~\$1 in funding               |
+| `k_V`    | \$1,000 in the vault for 1 day ≈ **10 points**                   |
+| `k_D`    | \$1,000 in a medium-width, in-range LP for 1 day ≈ **10 points** |
+| `k_F`    | A taker earning 10 points has paid ~\$1 in funding               |
 
 ---
 
@@ -107,7 +111,7 @@ Five levers. Each defeats a specific, constructible farming archetype.
 | **Min position duration (4h)**        | _Flash farmers:_ Direct positions closed before the threshold earn 0 points     |
 | **Min notional (\$50)**               | _Dust spammers:_ Eliminates thousands of \$1 positions gaming metrics           |
 | **No event-count rewards**            | _Wash churn:_ Repeatedly opening/closing to trigger per-event bonuses           |
-| **Out-of-range penalty ($S = 0.25$)** | _Parked-tick farmers:_ Placing LPs on ticks that rarely trade to farm risk-free |
+| **Out-of-range penalty (`S = 0.25`)** | _Parked-tick farmers:_ Placing LPs on ticks that rarely trade to farm risk-free |
 | **Per-user 24h saturation**           | _Whale dominance:_ Caps single-wallet burst farming                             |
 
 > **Note on min position duration:** I personally want to keep it above 4h since sticky TVL matters more and users should leave capital in the protocol for longer.
@@ -135,11 +139,15 @@ In the current version, direct position notional is held fixed from `POSITION_OP
 
 **Current:**
 
-$$\text{notional\_at\_open} \times S(p,t)$$
+```txt
+notional_at_open * S(p, t)
+```
 
 **Improved:**
 
-$$\text{current\_position\_value\_usd}(t) \times S(p,t)$$
+```txt
+current_position_value_usd(t) * S(p, t)
+```
 
 This makes points more economically accurate during large price moves.
 
@@ -159,9 +167,11 @@ Currently, reward weights are fixed constants. Later, these could become **dynam
 
 The current demand-side formula:
 
-$$F(u,t) = k_F \cdot \max\!\left(\text{funding\_paid\_rate}(u,t),\ 0\right)$$
+```txt
+F(u, t) = k_F * max(funding_paid_rate(u, t), 0)
+```
 
-I chose this because funding paid is a real economic cost and is harder to fake. But at the same time if we see what if somebody opened a $1M position during times when price is not much deviated and funding rate is minimal which means less funding paid and less points earned so its somewhere not fair no? So that’s why .
+I chose this because funding paid is a real economic cost and is harder to fake. But at the same time if somebody opened a USD 1M position during times when price is not much deviated and funding rate is minimal, they would pay very little funding and earn very few points, which is not always fair. So that’s why.
 
 **In next version we could include open perp notional and trading fees paid multiplier:**
 
