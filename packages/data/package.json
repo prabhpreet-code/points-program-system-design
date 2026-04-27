@@ -1,0 +1,23 @@
+{
+  "name": "@hyperunicorn/data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./events": "./generated/events.json",
+    "./scores": "./generated/scores.json"
+  },
+  "scripts": {
+    "generate": "tsx src/generate.ts",
+    "score": "tsx src/score.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hyperunicorn/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

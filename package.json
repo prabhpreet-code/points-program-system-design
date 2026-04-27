@@ -1,0 +1,23 @@
+{
+  "name": "hyperunicorn-points",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mini points system for a hypothetical AMM-based perp protocol (Panoptic take-home).",
+  "packageManager": "pnpm@10.29.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "generate": "pnpm --filter @hyperunicorn/data run generate",
+    "score": "pnpm --filter @hyperunicorn/data run score",
+    "build:data": "pnpm run generate && pnpm run score",
+    "dev": "pnpm --filter @hyperunicorn/web run dev",
+    "build": "pnpm --filter @hyperunicorn/web run build",
+    "test": "pnpm --filter @hyperunicorn/core run test",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.2"
+  }
+}

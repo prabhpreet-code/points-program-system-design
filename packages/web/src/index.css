@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-bg text-ink antialiased;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'zero';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle grid texture for the page background — adds terminal-ish depth
+   without being noisy. */
+body {
+  background-image:
+    radial-gradient(circle at 0 0, rgba(167, 139, 250, 0.035) 0%, transparent 35%),
+    radial-gradient(circle at 100% 100%, rgba(125, 211, 252, 0.025) 0%, transparent 40%);
+}
+
+/* Thin hairline scrollbars */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2A2A2F;
+  border-radius: 0;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #404049;
+}
+
+/* Tabular numerics everywhere that matters */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Tiny rule between sections */
+.rule {
+  @apply h-px w-full bg-line;
+}
+
+::selection {
+  background: rgba(167, 139, 250, 0.3);
+  color: #fff;
+}
